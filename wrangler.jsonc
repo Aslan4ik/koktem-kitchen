@@ -1,0 +1,7 @@
+{
+  "name": "koktem-kitchen-api",
+  "main": "./worker/index.js",
+  "compatibility_date": "2026-11-15",
+  "workers_dev": true,
+  "preview_urls": false
+}
