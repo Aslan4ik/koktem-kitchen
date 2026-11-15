@@ -9,24 +9,22 @@
 
 ## Архитектура
 
-GitHub Pages (статический сайт) → Cloudflare Worker (проверка Google Identity ID token, список разрешённых адресов) → Apps Script Web App (серверный секрет) → существующая Google Sheets.
+GitHub Pages (статический сайт) → Cloudflare Worker (общий пароль, проверка сеанса) → Apps Script Web App (серверный секрет) → существующая Google Sheets.
 
 GitHub Pages не исполняет Google Apps Script; `google.script.run` за пределами GAS не работает. И iframe не скрывает системное уведомление.
 
 ## Настройка
 
-1. В Google Cloud создать OAuth Client ID типа **Web application**. В **Authorized JavaScript origins** указать `https://aslan4ik.github.io`. Использовать только Google Identity Services; идентификатор клиента не является секретом.
-2. Сохранить Client ID в `config.js` (поля `googleClientId`, `apiBaseUrl`). Не коммитить токены.
-3. Развернуть Cloudflare Worker из `worker/index.js`. Установить защищённые переменные окружения `GOOGLE_CLIENT_ID`, `ALLOWED_EMAILS`, `GAS_URL`, `GAS_API_SECRET`, `ALLOWED_ORIGIN=https://aslan4ik.github.io`. Список адресов через запятую. Переменные `GAS_API_SECRET`, `ALLOWED_EMAILS` и `GAS_URL` предпочтительно задать как **secrets**.
-4. Добавить `apps-script/API.gs` в существующий GAS-проект. Установить Script property `KOKTEM_API_SECRET` равным секрету Worker. Обновить развёртывание GAS **Execute as: me** / **Anyone** (доступ к doPost регулируется секретом, но не публикуйте URL GAS).
-5. Поставить `apiBaseUrl` равным адресу Worker, например `https://<worker>.<subdomain>.workers.dev`.
-6. В GitHub → Settings → Pages → Deploy from a branch → main / root → Save. Проверить отдельно, что политика доступа и разграничение данных подходит вашей организации.
+1. В Cloudflare Worker → **Runtime variables and secrets → Production** добавить секреты `APP_PASSWORD`, `GAS_URL` и `GAS_API_SECRET`. Для пароля используйте длинное случайное значение. В `wrangler.jsonc` уже заданы origin сайта и ограничение попыток входа.
+2. Сначала подключить отдельный Apps Script для тестовой таблицы. Перенести туда функции чтения, записи и экспорта и добавить `apps-script/API.gs`. Задать Script property `KOKTEM_API_SECRET` равным секрету Worker. Использовать отдельный API-проект без HTML-интерфейса и без `doGet`, чтобы существующий веб-интерфейс сохранил свои настройки доступа. Убедиться, что тестовый проект ссылается только на тестовую таблицу.
+3. После проверки тестового контура повторить настройку для отдельного рабочего API-проекта. Указать URL его развёртывания `/exec` в секрете `GAS_URL` и использовать свой отдельный серверный секрет. Действующее приложение Apps Script может продолжать работать параллельно.
+4. В GitHub → Settings → Pages → Deploy from a branch → main / root → Save. Проверить отдельно, что политика доступа и разграничение данных подходит вашей организации.
 
 ## Безопасность
 
 - Репозиторий **публичный**: никаких персональных данных работников, паролей, адресов электронной почты из allowlist, идентификаторов служебных документов в коммитах.
 - Даже при защищённом API статический сайт публично доступен, но данные до успешного входа не загружаются.
-- Секрет GAS не должен попадать в браузер. Worker должен проверять и `aud`, и `email_verified`, и `email` у Google ID-токена.
+- Общий пароль и секрет GAS хранятся в Cloudflare. Сеанс действует до 8 часов. При смене пароля старые сеансы перестают работать.
 - Доступ к данным журнала здоровья ограничивайте только уполномоченными сотрудниками.
 - Перед эксплуатацией проверьте сохранение показаний и PDF на **копии** таблицы.
 

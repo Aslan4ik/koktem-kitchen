@@ -3,5 +3,19 @@
   "main": "./worker/index.js",
   "compatibility_date": "2026-11-15",
   "workers_dev": true,
-  "preview_urls": false
+  "preview_urls": false,
+  "vars": {
+    "ALLOWED_ORIGIN": "https://aslan4ik.github.io"
+  },
+  "ratelimits": [
+    {
+      "name": "LOGIN_RATE_LIMIT",
+      "namespace_id": "27150318",
+      "simple": {
+        "limit": 8,
+        "period": 60
+      }
+    }
+  ],
+  "keep_vars": true
 }
